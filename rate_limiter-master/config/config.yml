@@ -1,0 +1,25 @@
+server:
+  port: 8080
+  address: "0.0.0.0"
+  shutdown_timeout_seconds: 5
+
+redis:
+  addr: "redis"
+  port: 6379
+  db: 0
+  connection_timeout_seconds: 60
+  operation_timeout_seconds: 10
+  circuit_breaker_max_failures: 5
+  circuit_breaker_timeout_seconds: 30
+
+consul:
+  addr: "http://consul:8500"
+
+app:
+  fetch_config_period_seconds: 300
+  config_key: "rate_limiter_config"
+  backend_nginx_addr: "http://backend_nginx:80"
+  whitelisted_ips:
+    - "127.0.0.1"
+    - "::1"
+    - "10.0.0.1"

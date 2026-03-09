@@ -1,0 +1,118 @@
+services:
+  redis:
+    image: redis:8.2.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rate_limiter_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  consul:
+    image: consul:1.15.4
+    container_name: consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: "consul agent -dev -client=0.0.0.0"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8500/v1/status/leader" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rate_limiter_network
+
+  consul-config:
+    image: hashicorp/consul:1.15.4
+    depends_on:
+      consul:
+        condition: service_healthy
+    environment:
+      - CONSUL_HTTP_ADDR=http://consul:8500
+    entrypoint: /bin/sh
+    networks:
+      - rate_limiter_network
+    command:
+      - -c
+      - |
+        sleep 10 && \
+        # New rate limiter configuration
+        consul kv put rate_limiter_config '{
+            "routes": {
+              "root": {
+                "algorithm": "fixed_window",
+                "limit": 10,
+                "window": 60
+              },
+              "api-v1-test": {
+                "algorithm": "fixed_window",
+                "limit": 10,
+                "window": 60
+              },
+              "token-bucket-test": {
+                "algorithm": "token_bucket",
+                "capacity": 7,
+                "refill_rate": 1,
+                "bucket_ttl": 300
+              },
+              "sliding-window-test": {
+                "algorithm": "sliding_window",
+                "limit": 10,
+                "window": 60
+              }
+            }
+          }'
+
+  rate_limiter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rate_limiter
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-config:
+        condition: service_completed_successfully
+      backend_nginx:
+        condition: service_started
+    networks:
+      - rate_limiter_network
+
+  frontend_nginx:
+    image: nginx:1.25-alpine
+    container_name: frontend_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/frontend.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - rate_limiter
+    networks:
+      - rate_limiter_network
+
+  backend_nginx:
+    image: nginx:1.25-alpine
+    container_name: backend_nginx
+    volumes:
+      - ./nginx/backend.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+    networks:
+      - rate_limiter_network
+
+volumes:
+  redis_data:
+
+networks:
+  rate_limiter_network:
+    driver: bridge
