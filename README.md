@@ -621,11 +621,6 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 - [ ] Admin API for runtime management
 - [ ] Grafana dashboards
 
-## 📞 Contact & Support
-
-- **Issues:** [GitHub Issues](https://github.com/SilentPlaces/rate_limiter/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/SilentPlaces/rate_limiter/discussions)
-
 ## 🙏 Acknowledgments
 
 This project was built to demonstrate:
@@ -639,5 +634,3 @@ Special thanks to the Go community and all contributors!
 ---
 
 **⭐ If you find this project useful, please consider giving it a star!**
-
-*Built with ❤️ by Armin*
