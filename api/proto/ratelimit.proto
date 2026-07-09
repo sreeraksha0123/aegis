@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package ratelimit;
+
+option go_package = "aegis/api/proto;proto";
+
+service RateLimiter {
+  // CheckLimit evaluates a single rate-limit check.
+  rpc CheckLimit(RateLimitRequest) returns (RateLimitResponse);
+
+  // CheckLimitBatch supports bidirectional streaming for high-throughput
+  // clients that want to avoid one-RPC-per-request overhead.
+  rpc CheckLimitBatch(stream RateLimitRequest) returns (stream RateLimitResponse);
+
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  rpc UpdateConfig(UpdateConfigRequest) returns (UpdateConfigResponse);
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message RateLimitRequest {
+  string key = 1;        // identifier: user_id, api_path, ip, etc.
+  string algorithm = 2;  // "token_bucket" or "sliding_window"
+  string tenant = 3;     // tenant isolation namespace
+  int64 requests = 4;    // number of units/tokens this call wants to consume
+}
+
+message RateLimitResponse {
+  bool allowed = 1;
+  int64 remaining = 2;
+  int64 reset_time = 3;   // unix ms when the limit window/bucket resets
+  int64 limit = 4;
+  int64 retry_after = 5;  // ms to wait before retrying, if denied
+}
+
+message RateLimitConfig {
+  string algorithm = 1;
+  int64 rate = 2;         // tokens/sec (token bucket) or ignored for sliding window
+  int64 capacity = 3;     // burst capacity (token bucket)
+  int64 window_ms = 4;    // window size (sliding window)
+  int64 limit = 5;        // max requests per window (sliding window)
+}
+
+message GetConfigRequest {
+  string tenant = 1;
+  string key_prefix = 2;
+}
+
+message GetConfigResponse {
+  RateLimitConfig config = 1;
+}
+
+message UpdateConfigRequest {
+  string tenant = 1;
+  string key_prefix = 2;
+  RateLimitConfig config = 3;
+}
+
+message UpdateConfigResponse {
+  bool success = 1;
+}
+
+message GetMetricsRequest {
+  string tenant = 1;
+}
+
+message GetMetricsResponse {
+  int64 total_requests = 1;
+  int64 allowed_requests = 2;
+  int64 denied_requests = 3;
+  double hit_ratio = 4;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  bool redis_connected = 2;
+}

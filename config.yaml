@@ -1,0 +1,31 @@
+server:
+  port: 50051
+  max_connections: 1000
+  timeout: 5s
+redis:
+  addresses:
+    - localhost:6379
+  db: 0
+  pool_size: 200
+  min_idle_conns: 50
+  max_conn_age: 30m
+  idle_timeout: 10m
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+rate_limiter:
+  default_algorithm: token_bucket
+  token_bucket:
+    default_rate: 1000
+    default_capacity: 2000
+  sliding_window:
+    default_window: 60s
+    default_limit: 100
+  key_ttl_seconds: 3600
+tenant:
+  isolation: true
+  max_tenants: 1000
+metrics:
+  enabled: true
+  port: 9090
+  path: /metrics
